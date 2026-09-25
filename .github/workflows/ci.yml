@@ -1,0 +1,74 @@
+name: CI Pipeline - Enterprise Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-and-test:
+    name: Lint, Typecheck & Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install --workspace=server
+          npm install --workspace=client
+
+      - name: Initialize Prisma Schema & Client
+        run: |
+          cd server
+          npx prisma generate
+          npx prisma db push
+
+      - name: TypeScript Static Typecheck
+        run: |
+          npm run lint --workspace=server
+          npm run lint --workspace=client
+
+      - name: Execute Backend Unit & API Integration Tests
+        run: |
+          npm run test --workspace=server
+
+      - name: Build Production Frontend Assets
+        run: |
+          npm run build --workspace=client
+
+  docker-build:
+    name: Container Build & Security Scan
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: actions/docker-buildx-action@v3
+
+      - name: Build Server Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.server
+          push: false
+          tags: esperia-ai-qa-server:ci-test
+
+      - name: Build Client Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.client
+          push: false
+          tags: esperia-ai-qa-client:ci-test
