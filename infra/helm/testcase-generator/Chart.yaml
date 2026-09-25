@@ -1,0 +1,16 @@
+apiVersion: v2
+name: testcase-generator
+description: Enterprise Helm Chart for AI Test Case Generator Full-Stack Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - qa
+  - ai
+  - fullstack
+  - react
+  - nodejs
+  - kubernetes
+maintainers:
+  - name: Esperia DevOps Team
+    email: devops@esperia.ai

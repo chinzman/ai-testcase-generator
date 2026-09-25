@@ -1,0 +1,72 @@
+# Default values for testcase-generator Helm Chart
+
+global:
+  environment: production
+  domain: testcase-generator.esperia.ai
+
+server:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/esperia-quantum/ai-testcase-generator-server
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5001
+  env:
+    PORT: 5001
+    NODE_ENV: production
+    CORS_ORIGIN: "*"
+    RATE_LIMIT_MAX: 200
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+
+client:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/esperia-quantum/ai-testcase-generator-client
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  tls:
+    - secretName: testcase-generator-tls
+      hosts:
+        - testcase-generator.esperia.ai
