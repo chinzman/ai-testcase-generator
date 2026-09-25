@@ -1,6 +1,10 @@
 import { GenerateResponse, TestSuite, TestDimension, TestCase, SystemHealth } from '../types/index.js';
 
-const API_BASE = '/api';
+const envApiUrl = (import.meta as any).env?.VITE_API_URL;
+const rawBase = envApiUrl
+  ? (envApiUrl.startsWith('http') ? envApiUrl : `https://${envApiUrl}`)
+  : '';
+const API_BASE = rawBase ? `${rawBase.replace(/\/$/, '')}/api` : '/api';
 
 export function getStoredApiKey(): string {
   return localStorage.getItem('es_user_api_key') || '';
