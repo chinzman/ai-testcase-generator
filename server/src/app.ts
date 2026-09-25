@@ -13,7 +13,10 @@ import { healthRouter } from './routes/healthRoutes.js';
 export function createApp() {
   const app = express();
 
-  // Security Headers (configured to allow Vite frontend assets and Google fonts)
+  // Trust reverse proxy (Render, AWS ALB, Cloudflare) for accurate client IPs
+  app.set('trust proxy', 1);
+
+  // Security Headers (allow Vite frontend assets and Google fonts)
   app.use(
     helmet({
       contentSecurityPolicy: false,
@@ -37,14 +40,13 @@ export function createApp() {
   // Observability & Request Tracing
   app.use(requestTraceMiddleware);
 
-  // Rate Limiting on API endpoints
-  app.use('/api', apiRateLimiter);
-
-  // API Routes
+  // 1. Unrestricted Health Check & Readiness Endpoints (Bypasses rate limiting)
   app.use('/api', healthRouter);
-  app.use('/api', testSuiteRouter);
 
-  // Serve Frontend Static SPA Assets if built
+  // 2. Protected Business API Routes (Enforces rate limiting)
+  app.use('/api', apiRateLimiter, testSuiteRouter);
+
+  // 3. Serve Frontend Static SPA Assets if built
   const possiblePaths = [
     path.resolve(process.cwd(), '../client/dist'),
     path.resolve(process.cwd(), 'client/dist'),
