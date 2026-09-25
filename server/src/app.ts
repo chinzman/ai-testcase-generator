@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import fs from 'fs';
 import { env } from './config/env.js';
 import { requestTraceMiddleware } from './middleware/requestTrace.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
@@ -11,8 +13,12 @@ import { healthRouter } from './routes/healthRoutes.js';
 export function createApp() {
   const app = express();
 
-  // Security Headers
-  app.use(helmet());
+  // Security Headers (configured to allow Vite frontend assets and Google fonts)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    })
+  );
 
   // CORS Configuration
   app.use(
@@ -34,11 +40,29 @@ export function createApp() {
   // Rate Limiting on API endpoints
   app.use('/api', apiRateLimiter);
 
-  // Routes
+  // API Routes
   app.use('/api', healthRouter);
   app.use('/api', testSuiteRouter);
 
-  // 404 Catch-All
+  // Serve Frontend Static SPA Assets if built
+  const possiblePaths = [
+    path.resolve(process.cwd(), '../client/dist'),
+    path.resolve(process.cwd(), 'client/dist'),
+    path.resolve(process.cwd(), '../dist/client'),
+  ];
+  const clientDistPath = possiblePaths.find((p) => fs.existsSync(p));
+
+  if (clientDistPath) {
+    app.use(express.static(clientDistPath));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.sendFile(path.join(clientDistPath, 'index.html'));
+    });
+  }
+
+  // 404 Catch-All for unmatched /api routes
   app.use((_req, res) => {
     res.status(404).json({
       success: false,
