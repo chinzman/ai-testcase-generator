@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TestSuite {
+  id              String     @id @default(uuid())
+  title           String
+  rawRequirement  String
+  modelUsed       String     @default("gpt-4o-mini")
+  qualityScore    Int?       @default(85)
+  qualityFeedback String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  testCases       TestCase[]
+
+  @@map("test_suites")
+}
+
+model TestCase {
+  id             String    @id @default(uuid())
+  suiteId        String
+  suite          TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  testCaseId     String
+  title          String
+  description    String
+  dimension      String    // POSITIVE, NEGATIVE, EDGE_CASE, VALIDATION, SECURITY
+  priority       String    // HIGH, MEDIUM, LOW
+  preconditions  String
+  steps          String    // JSON serialized array of steps
+  expectedResult String
+  gherkin        String?
+  status         String    @default("DRAFT") // DRAFT, REVIEWED, APPROVED
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([suiteId])
+  @@index([dimension])
+  @@map("test_cases")
+}
